@@ -1,109 +1,66 @@
-import { Axios } from 'axios';
+'use strict';
 
-type UUID = string;
-type MacAddress = string;
-type IPV4 = string;
-type IPV6 = string;
+var universalBase64 = require('universal-base64');
+var axios = require('axios');
 
-type DeviceID = UUID;
-type Band = '2.4GHz' | '5GHz' | string;
-interface DeviceModel {
-    manufacturer: string;
-    modelNumber: string;
-    hardwareVersion: string;
-    description: string;
-}
-interface DeviceUnit {
-    serialNumber: string;
-    firmwareVersion: string;
-    firmwareDate: string;
-}
-interface DeviceInfo extends DeviceModel, DeviceUnit {
-    services: string[];
-}
-type DeviceInfoOutput = DeviceInfo;
-interface Device {
-    deviceID: DeviceID;
-    lastChangeRevision: number;
-    model: DeviceModel & {
-        deviceType: 'Infrastructure' | 'Mobile' | 'Computer' | 'MediaPlayer' | '' | string;
+const JNAP_HEADER_PREFIX = "X-JNAP-";
+const JNAP_HEADERS = {
+  ACTION: `${JNAP_HEADER_PREFIX}Action`,
+  AUTHORIZATION: `${JNAP_HEADER_PREFIX}Authorization`
+};
+const JNAP_API_BASE_PATH = "/JNAP/";
+const JNAP_ACTION_BASE_URL = "http://linksys.com/jnap/";
+
+var JnapResponseResult = /* @__PURE__ */ ((JnapResponseResult2) => {
+  JnapResponseResult2["OK"] = "OK";
+  return JnapResponseResult2;
+})(JnapResponseResult || {});
+
+class LinksysDevice {
+  constructor(options) {
+    this.getInfo = async () => {
+      return await this.action("core/GetDeviceInfo");
     };
-    unit: Partial<DeviceUnit> & {
-        operatingSystem?: 'Android' | 'Windows' | string;
+    this.getDevices = async () => {
+      return (await this.action("devicelist/GetDevices3")).devices;
     };
-    isAuthority: boolean;
-    friendlyName: string;
-    knownInterfaces: {
-        macAddress: MacAddress;
-        interfaceType: 'Wireless' | 'Wired' | 'Unknown' | string;
-        band?: Band;
-    }[];
-    connections: {
-        macAddress: MacAddress;
-        ipAddress: IPV4;
-        ipv6Address?: IPV6;
-        parentDeviceID?: DeviceID;
-    }[];
-    properties: {
-        name: 'userDeviceName' | 'userDeviceType' | string;
-        value: string;
-    }[];
-    maxAllowedProperties: number;
-}
-interface DevicesOutput {
-    revision: number;
-    devices: Device[];
-    deletedDeviceIDs: DeviceID[];
-}
-interface NetworkConnection {
-    macAddress: MacAddress;
-    negotiatedMbps: number;
-    wireless?: {
-        bssid: MacAddress;
-        isGuest: boolean;
-        radioID: string;
-        band: Band;
-        signalDecibels: number;
+    this.getNetworkConnections = async () => {
+      return (await this.action(
+        "networkconnections/GetNetworkConnections2"
+      )).connections;
     };
-}
-interface NetworkConnectionsOutput {
-    connections: NetworkConnection[];
-}
-
-interface DeviceOptions {
-    /**
-     * IP or hostname, optionally with port, e.g. 192.168.1.1
-     */
-    origin: string;
-    /**
-     * Auth username, default: admin
-     */
-    user?: string;
-    /**
-     * Auth password
-     */
-    password?: string;
-    /**
-     * Whether to use HTTPS
-     */
-    ssl?: boolean;
-}
-declare class LinksysDevice {
-    readonly axios: Axios;
-    private readonly authHeaders;
-    constructor(options: DeviceOptions);
-    action<TOutput = unknown>(action: string, data?: {}, auth?: boolean): Promise<TOutput>;
-    getInfo: () => Promise<DeviceInfo>;
-    getDevices: () => Promise<Device[]>;
-    getNetworkConnections: () => Promise<NetworkConnection[]>;
-}
-
-declare enum JnapResponseResult {
-    OK = "OK"
-}
-interface JnapResponseBody<TOutput = unknown> {
-    result: JnapResponseResult | string;
-    output: TOutput;
+    const { origin, user = "admin", password = "", ssl = false } = options;
+    this.authHeaders = {
+      [JNAP_HEADERS.AUTHORIZATION]: `Basic ${universalBase64.encode(`${user}:${password}`)}`
+    };
+    this.axios = new axios.Axios({
+      ...axios.defaults,
+      baseURL: `http${ssl ? "s" : ""}://${origin}${JNAP_API_BASE_PATH}`,
+      headers: {
+        Accept: "application/json"
+      }
+    });
+  }
+  async action(action, data = {}, auth = true) {
+    const response = await this.axios.post(
+      "",
+      data,
+      {
+        headers: {
+          [JNAP_HEADERS.ACTION]: `${JNAP_ACTION_BASE_URL}${action}`,
+          ...auth ? this.authHeaders : {}
+        }
+      }
+    );
+    const { status, data: responseData } = response;
+    if (status >= 400) {
+      throw new Error(`Response code is ${status}`);
+    }
+    if (responseData?.result !== JnapResponseResult.OK) {
+      throw new Error(`Response result is "${responseData?.result}"`);
+    }
+    return responseData?.output;
+  }
 }
 
-export { type Band, type Device, type DeviceID, type DeviceInfo, type DeviceInfoOutput, type DeviceModel, type DeviceUnit, type DevicesOutput, type JnapResponseBody, JnapResponseResult, LinksysDevice, type NetworkConnection, type NetworkConnectionsOutput };
+exports.LinksysDevice = LinksysDevice;
