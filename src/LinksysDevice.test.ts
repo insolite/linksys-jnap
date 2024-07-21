@@ -25,4 +25,9 @@ describe(LinksysDevice.name, () => {
     const connections = await device.getNetworkConnections();
     console.log(connections);
   });
+
+  it('getBackhaulInfo', async () => {
+    const devices = await device.getBackhaulInfo();
+    console.log(devices);
+  });
 });

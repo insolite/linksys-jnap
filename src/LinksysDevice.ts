@@ -10,6 +10,7 @@ import {
   DeviceInfoOutput,
   DevicesOutput,
   NetworkConnectionsOutput,
+  BackhaulDevicesOutput,
 } from './types/actions';
 
 export interface DeviceOptions {
@@ -85,6 +86,14 @@ class LinksysDevice {
         'networkconnections/GetNetworkConnections2',
       )
     ).connections;
+  };
+
+  getBackhaulInfo = async () => {
+    return (
+      await this.action<BackhaulDevicesOutput>(
+        'nodes/diagnostics/GetBackhaulInfo',
+      )
+    ).backhaulDevices;
   };
 }
 

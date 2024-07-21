@@ -29,6 +29,11 @@ class LinksysDevice {
         "networkconnections/GetNetworkConnections2"
       )).connections;
     };
+    this.getBackhaulInfo = async () => {
+      return (await this.action(
+        "nodes/diagnostics/GetBackhaulInfo"
+      )).backhaulDevices;
+    };
     const { origin, user = "admin", password = "", ssl = false } = options;
     this.authHeaders = {
       [JNAP_HEADERS.AUTHORIZATION]: `Basic ${universalBase64.encode(`${user}:${password}`)}`

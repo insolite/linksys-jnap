@@ -4,9 +4,11 @@ type UUID = string;
 type MacAddress = string;
 type IPV4 = string;
 type IPV6 = string;
+type ISODateTime = string;
 
 type DeviceID = UUID;
 type Band = '2.4GHz' | '5GHz' | string;
+type InterfaceType = 'Wireless' | 'Wired' | 'Unknown' | string;
 interface DeviceModel {
     manufacturer: string;
     modelNumber: string;
@@ -32,10 +34,12 @@ interface Device {
         operatingSystem?: 'Android' | 'Windows' | string;
     };
     isAuthority: boolean;
+    nodeType: 'Master' | 'Slave' | string;
+    isHomeKitSupported?: boolean;
     friendlyName: string;
     knownInterfaces: {
         macAddress: MacAddress;
-        interfaceType: 'Wireless' | 'Wired' | 'Unknown' | string;
+        interfaceType: InterfaceType;
         band?: Band;
     }[];
     connections: {
@@ -69,6 +73,22 @@ interface NetworkConnection {
 interface NetworkConnectionsOutput {
     connections: NetworkConnection[];
 }
+interface BackhaulDevice {
+    deviceUUID: DeviceID;
+    ipAddress: IPV4;
+    parentIPAddress: IPV4;
+    connectionType: InterfaceType;
+    wirelessConnectionInfo?: {
+        radioID: string;
+        channel: number;
+        apRSSI: number;
+        stationRSSI: number;
+        apBSSID: MacAddress;
+        stationBSSID: MacAddress;
+    };
+    speedMbps: string;
+    timestamp: ISODateTime;
+}
 
 interface DeviceOptions {
     /**
@@ -96,6 +116,7 @@ declare class LinksysDevice {
     getInfo: () => Promise<DeviceInfo>;
     getDevices: () => Promise<Device[]>;
     getNetworkConnections: () => Promise<NetworkConnection[]>;
+    getBackhaulInfo: () => Promise<BackhaulDevice[]>;
 }
 
 declare enum JnapResponseResult {

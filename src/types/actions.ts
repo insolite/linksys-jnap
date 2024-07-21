@@ -1,7 +1,8 @@
-import { UUID, MacAddress, IPV4, IPV6 } from './core';
+import { UUID, MacAddress, IPV4, IPV6, ISODateTime } from './core';
 
 export type DeviceID = UUID;
 export type Band = '2.4GHz' | '5GHz' | string;
+export type InterfaceType = 'Wireless' | 'Wired' | 'Unknown' | string;
 
 export interface DeviceModel {
   manufacturer: string;
@@ -42,10 +43,12 @@ export interface Device {
     operatingSystem?: 'Android' | 'Windows' | string;
   };
   isAuthority: boolean;
+  nodeType: 'Master' | 'Slave' | string;
+  isHomeKitSupported?: boolean;
   friendlyName: string;
   knownInterfaces: {
     macAddress: MacAddress;
-    interfaceType: 'Wireless' | 'Wired' | 'Unknown' | string;
+    interfaceType: InterfaceType;
     band?: Band;
   }[];
   connections: {
@@ -83,4 +86,27 @@ export interface NetworkConnection {
 
 export interface NetworkConnectionsOutput {
   connections: NetworkConnection[];
+}
+
+// nodes/diagnostics/GetBackhaulInfo
+
+export interface BackhaulDevice {
+  deviceUUID: DeviceID;
+  ipAddress: IPV4;
+  parentIPAddress: IPV4;
+  connectionType: InterfaceType;
+  wirelessConnectionInfo?: {
+    radioID: string;
+    channel: number;
+    apRSSI: number;
+    stationRSSI: number;
+    apBSSID: MacAddress;
+    stationBSSID: MacAddress;
+  };
+  speedMbps: string;
+  timestamp: ISODateTime;
+}
+
+export interface BackhaulDevicesOutput {
+  backhaulDevices: BackhaulDevice[];
 }
